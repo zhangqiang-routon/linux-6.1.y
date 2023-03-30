@@ -147,7 +147,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_host_wake_l>;
 		clock-names = "clk_wifi";
-		WIFI,host_wake_l = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
+		WIFI,host_wake_l = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
  		status = "disabled";
 	};
 
@@ -187,6 +187,9 @@
 
 	// 4G Module
 	vcc3v3_gsm: vcc3v3-gsm {
+		//add by zhang
+		status = "disabled";
+		//add end
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpio = <&gpio4 RK_PC6 GPIO_ACTIVE_HIGH>; // bsp
@@ -202,7 +205,7 @@
 		compatible = "regulator-fixed";
 		enable-active-high;
 		regulator-boot-on;
-		gpio = <&gpio4 RK_PD6 GPIO_ACTIVE_HIGH>; // bsp
+		gpio = <&gpio4 RK_PD1 GPIO_ACTIVE_HIGH>; // bsp
 		pinctrl-names = "default";
 		pinctrl-0 = <&vcc5v0_host_en>;
 		regulator-name = "vcc5v0_host";
@@ -213,7 +216,7 @@
 	vcc5v0_typec0: vbus-typec-regulator {
 		compatible = "regulator-fixed";
 		enable-active-high;
-		gpio = <&gpio4 RK_PD2 GPIO_ACTIVE_HIGH>; // bsp
+		gpio = <&gpio1 RK_PA3 GPIO_ACTIVE_HIGH>; // bsp
 		pinctrl-names = "default";
 		pinctrl-0 = <&vcc5v0_typec_en>;
 		regulator-name = "vcc5v0_typec0";
@@ -249,7 +252,7 @@
 		simple-audio-card,name = "realtek,rt5651-codec";
 		simple-audio-card,format = "i2s";
 		simple-audio-card,mclk-fs = <256>;
-		simple-audio-card,hp-det-gpio = <&gpio4 RK_PD4 GPIO_ACTIVE_HIGH>;
+		simple-audio-card,hp-det-gpio = <&gpio1 RK_PC2 GPIO_ACTIVE_HIGH>;
 		simple-audio-card,aux-devs = <&speaker_amp>;
 		simple-audio-card,pin-switches = "Speaker";
 		simple-audio-card,widgets =
@@ -290,19 +293,25 @@
 			label = "breathe_led";
 			linux,default-trigger = "heartbeat";
 			default-state = "off";
-			gpios = <&gpio4 RK_PD0 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 RK_PB4 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
-	fan0: gpio-fan { // verify // vcc5v0_sys
+	fan0: gpio-fan { // verify // vcc5v0_sys//散热风扇
+		//add by zhang
+		status = "disabled";
+		//add end
 		#cooling-cells = <2>;
 		compatible = "gpio-fan";
 		gpio-fan,speed-map = <0 0 2500 1>;
 		gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_HIGH>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	gpio-restart {
+		//add by zhang
+		status = "disabled";
+		//add end
 		compatible = "gpio-restart";
 		gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
 		pinctrl-names = "default";
@@ -381,8 +390,8 @@
 
 		rtl8211e: ethernet-phy@1 {
 			reg = <1>;
-			interrupt-parent = <&gpio3>;
-			interrupts = <RK_PB2 IRQ_TYPE_LEVEL_LOW>;
+			interrupt-parent = <&gpio1>;
+			interrupts = <RK_PC7 IRQ_TYPE_LEVEL_LOW>;
 			reset-assert-us = <10000>;
 			reset-deassert-us = <30000>;
 			reset-gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
@@ -701,7 +710,7 @@
 
 	fusb302@22 { // bsp checked
 		compatible = "fcs,fusb302";
-		reg = <0x22>;
+		reg = <0x44>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <RK_PA2 IRQ_TYPE_LEVEL_LOW>; // bsp
 		pinctrl-names = "default";
@@ -747,6 +756,9 @@
 	};
 
 	mma8452: mma8452@1d {
+		//add by zhang
+		status = "disabled";
+		//add end
 		compatible = "fsl,mma8452";
 		reg = <0x1d>;
 		interrupt-parent = <&gpio1>;
@@ -812,7 +824,7 @@
 
 	gmac {
 		phy_intb: phy-intb {
-			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>; // verify
+			rockchip,pins = <1 RK_PC7 RK_FUNC_GPIO &pcfg_pull_up>; // verify
 		};
 
 		phy_rstb: phy-rstb {
@@ -846,11 +858,11 @@
 
 	usb2 {
 		vcc5v0_host_en: vcc5v0-host-en {
-			rockchip,pins = <4 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>; // bsp
+			rockchip,pins = <4 RK_PD1 RK_FUNC_GPIO &pcfg_pull_none>; // bsp
 		};
 
 		vcc5v0_typec_en: vcc5v0-typec-en {
-			rockchip,pins = <4 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>; // bsp
+			rockchip,pins = <1 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>; // bsp
 		};
 
 		hub_rst: hub-rst {
@@ -880,7 +892,7 @@
 		};
 
 		bt_wake_l: bt-wake-l {
-			rockchip,pins = <2 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>; // checked
+			rockchip,pins = <2 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>; // checked
 		};
 	};
 
@@ -892,7 +904,7 @@
 
 	leds {
 		breathe_led_pin: breathe-led-pin {
-			rockchip,pins = <4 RK_PD0 RK_FUNC_GPIO &pcfg_pull_none>; // bsp
+			rockchip,pins = <0 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>; // bsp
 		};
 	};
 
@@ -904,7 +916,7 @@
 
 	headphone {
 		hp_det: hp-det {
-			rockchip,pins = <4 RK_PD4 RK_FUNC_GPIO &pcfg_pull_up>; // verify
+			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_up>; // verify
 		};
 		spk_ctl: spk-ctl {
 			rockchip,pins = <0 RK_PB3 RK_FUNC_GPIO &pcfg_pull_up>; // verify
@@ -947,22 +959,30 @@
 };
 
 &sdio0 {
-	bus-width = <4>;
-	supports-sdio;
-	cap-sd-highspeed;
-	cap-sdio-irq;
-	clock-frequency = <50000000>;
-	disable-wp;
-	keep-power-in-suspend;
-	max-frequency = <150000000>;
-	mmc-pwrseq = <&sdio_pwrseq>;
-	non-removable;
-	pinctrl-names = "default";
-	pinctrl-0 = <&sdio0_bus4 &sdio0_cmd &sdio0_clk>;
-	sd-uhs-sdr104;
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "disabled";
+	        /* WiFi & BT combo module AMPAK AP6255 */
+        #address-cells = <1>;
+        #size-cells = <0>;
+        bus-width = <4>;
+        clock-frequency = <50000000>;
+        cap-sdio-irq;
+        cap-sd-highspeed;
+        keep-power-in-suspend;
+        mmc-pwrseq = <&sdio_pwrseq>;
+        non-removable;
+        pinctrl-names = "default";
+        pinctrl-0 = <&sdio0_bus4 &sdio0_cmd &sdio0_clk>;
+        sd-uhs-sdr104;
+        status = "okay";
+
+        brcmf: wifi@1 {
+                compatible = "brcm,bcm43455-fmac";
+                reg = <1>;
+                interrupt-parent = <&gpio0>;
+                interrupts = <RK_PA3 GPIO_ACTIVE_HIGH>;
+                interrupt-names = "host-wake";
+                pinctrl-names = "default";
+                pinctrl-0 = <&wifi_host_wake_l>;
+        };
 };
 
 &sdmmc {
@@ -970,7 +990,7 @@
 	cap-mmc-highspeed;
 	cap-sd-highspeed;
 	cd-gpios = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>; // checked
-	clock-frequency = <50000000>;
+	clock-frequency = <150000000>;
 	disable-wp;
 	max-frequency = <150000000>;
 	pinctrl-names = "default";
@@ -1047,21 +1067,22 @@
 
 &uart0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&uart0_xfer &uart0_cts &uart0_rts>;
-	status = "okay";
+        pinctrl-0 = <&uart0_xfer &uart0_cts &uart0_rts>;
+        status = "okay";
 
-	bluetooth {
-		compatible = "brcm,bcm43438-bt";
-		clocks = <&rk808 1>;
-		clock-names = "lpo";
-		device-wakeup-gpios = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
-		host-wakeup-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
-		shutdown-gpios = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&bt_host_wake_l &bt_wake_l &bt_reg_on_h>;
-		vbat-supply = <&vcc5v0_sys>;
-		vddio-supply = <&vcc_1v8>;
-	};
+        bluetooth {
+                compatible = "brcm,bcm4345c5";
+                clocks = <&rk808 1>;
+                clock-names = "lpo";
+                device-wakeup-gpios = <&gpio2 RK_PD3 GPIO_ACTIVE_HIGH>;
+                host-wakeup-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
+                shutdown-gpios = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
+                max-speed = <1500000>;
+                pinctrl-names = "default";
+                pinctrl-0 = <&bt_host_wake_l &bt_wake_l &bt_enable_h>;
+                vbat-supply = <&vcc3v3_sys>;
+                vddio-supply = <&vcc_1v8>;
+        };
 };
 
 &uart2 {
@@ -1134,6 +1155,6 @@
         status = "okay";
 };
 &wireless_wlan {
-	wifi_chip_type = "ap6356"; 
+	wifi_chip_type = "ap6255"; 
 	status = "okay";
 };
