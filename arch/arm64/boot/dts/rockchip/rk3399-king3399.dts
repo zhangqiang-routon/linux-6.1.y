@@ -313,7 +313,7 @@
 		status = "disabled";
 		//add end
 		compatible = "gpio-restart";
-		gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
+		gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&hub_rst>;
 		priority = <200>;

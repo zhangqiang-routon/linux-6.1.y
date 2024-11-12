@@ -39,6 +39,8 @@ static int mt7915_check_eeprom(struct mt7915_dev *dev)
 		return CHECK_EEPROM_ERR(is_mt7915(&dev->mt76));
 	case 0x7916:
 		return CHECK_EEPROM_ERR(is_mt7916(&dev->mt76));
+	case 0x7981:
+		return CHECK_EEPROM_ERR(is_mt7981(&dev->mt76));
 	case 0x7986:
 		return CHECK_EEPROM_ERR(is_mt7986(&dev->mt76));
 	default:
@@ -52,6 +54,9 @@ static char *mt7915_eeprom_name(struct mt7915_dev *dev)
 	case 0x7915:
 		return dev->dbdc_support ?
 		       MT7915_EEPROM_DEFAULT_DBDC : MT7915_EEPROM_DEFAULT;
+	case 0x7981:
+		/* mt7981 only supports mt7976 and only in DBDC mode */
+		return MT7981_EEPROM_MT7976_DEFAULT_DBDC;
 	case 0x7986:
 		switch (mt7915_check_adie(dev, true)) {
 		case MT7976_ONE_ADIE_DBDC:
@@ -148,13 +153,19 @@ static void mt7915_eeprom_parse_band_config(struct mt7915_phy *phy)
 	if (!is_mt7915(&dev->mt76)) {
 		switch (val) {
 		case MT_EE_V2_BAND_SEL_5GHZ:
-			phy->mt76->cap.has_5ghz = true;
-			return;
-		case MT_EE_V2_BAND_SEL_6GHZ:
-			phy->mt76->cap.has_6ghz = true;
-			return;
 		case MT_EE_V2_BAND_SEL_5GHZ_6GHZ:
 			phy->mt76->cap.has_5ghz = true;
+
+			if (val == MT_EE_V2_BAND_SEL_5GHZ_6GHZ) {
+				u8p_replace_bits(&eeprom[MT_EE_WIFI_CONF + band],
+						 MT_EE_V2_BAND_SEL_5GHZ,
+						 MT_EE_WIFI_CONF0_BAND_SEL);
+
+				/* force to buffer mode */
+				dev->flash_mode = true;
+			}
+			return;
+		case MT_EE_V2_BAND_SEL_6GHZ:
 			phy->mt76->cap.has_6ghz = true;
 			return;
 		default:
@@ -215,7 +226,7 @@ void mt7915_eeprom_parse_hw_cap(struct mt7915_dev *dev,
 					eeprom[MT_EE_WIFI_CONF + 2 + band]);
 		}
 
-		if (!is_mt7986(&dev->mt76))
+		if (!is_mt798x(&dev->mt76))
 			nss_max = 2;
 	}
 

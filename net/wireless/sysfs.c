@@ -5,7 +5,7 @@
  *
  * Copyright 2005-2006	Jiri Benc <jbenc@suse.cz>
  * Copyright 2006	Johannes Berg <johannes@sipsolutions.net>
- * Copyright (C) 2020-2021 Intel Corporation
+ * Copyright (C) 2020-2021, 2023-2024 Intel Corporation
  */
 
 #include <linux/device.h>
@@ -24,18 +24,35 @@ static inline struct cfg80211_registered_device *dev_to_rdev(
 	return container_of(dev, struct cfg80211_registered_device, wiphy.dev);
 }
 
-#define SHOW_FMT(name, fmt, member)					\
+#define SHOW_FMT(name, fmt, member, mode)				\
 static ssize_t name ## _show(struct device *dev,			\
 			      struct device_attribute *attr,		\
 			      char *buf)				\
 {									\
 	return sprintf(buf, fmt "\n", dev_to_rdev(dev)->member);	\
 }									\
-static DEVICE_ATTR_RO(name)
+static DEVICE_ATTR_##mode(name)
 
-SHOW_FMT(index, "%d", wiphy_idx);
-SHOW_FMT(macaddress, "%pM", wiphy.perm_addr);
-SHOW_FMT(address_mask, "%pM", wiphy.addr_mask);
+static ssize_t macaddress_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t len)
+{
+	u8 mac[ETH_ALEN];
+
+	if (!mac_pton(buf, mac))
+		return -EINVAL;
+
+	if (buf[3 * ETH_ALEN - 1] && buf[3 * ETH_ALEN - 1] != '\n')
+		return -EINVAL;
+
+	memcpy(dev_to_rdev(dev)->wiphy.perm_addr, mac, ETH_ALEN);
+
+	return strnlen(buf, len);
+}
+
+SHOW_FMT(index, "%d", wiphy_idx, RO);
+SHOW_FMT(macaddress, "%pM", wiphy.perm_addr, RW);
+SHOW_FMT(address_mask, "%pM", wiphy.addr_mask, RO);
 
 static ssize_t name_show(struct device *dev,
 			 struct device_attribute *attr,
@@ -105,14 +122,18 @@ static int wiphy_suspend(struct device *dev)
 			cfg80211_leave_all(rdev);
 			cfg80211_process_rdev_events(rdev);
 		}
+		cfg80211_process_wiphy_works(rdev, NULL);
 		if (rdev->ops->suspend)
 			ret = rdev_suspend(rdev, rdev->wiphy.wowlan_config);
 		if (ret == 1) {
 			/* Driver refuse to configure wowlan */
 			cfg80211_leave_all(rdev);
 			cfg80211_process_rdev_events(rdev);
+			cfg80211_process_wiphy_works(rdev, NULL);
 			ret = rdev_suspend(rdev, NULL);
 		}
+		if (ret == 0)
+			rdev->suspended = true;
 	}
 	wiphy_unlock(&rdev->wiphy);
 	rtnl_unlock();
@@ -132,6 +153,8 @@ static int wiphy_resume(struct device *dev)
 	wiphy_lock(&rdev->wiphy);
 	if (rdev->wiphy.registered && rdev->ops->resume)
 		ret = rdev_resume(rdev);
+	rdev->suspended = false;
+	queue_work(system_unbound_wq, &rdev->wiphy_work);
 	wiphy_unlock(&rdev->wiphy);
 
 	if (ret)

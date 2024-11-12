@@ -14,13 +14,28 @@
 	aliases {
 		ethernet0 = &gmac0;
 		ethernet1 = &gmac1;
-		mmc0 = &sdhci;
-		mmc1 = &sdmmc0;
+		mmc0 = &sdmmc0;
+		mmc1 = &sdhci;
 		mmc2 = &sdmmc1;
 	};
 
 	chosen: chosen {
 		stdout-path = "serial2:1500000n8";
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		net-led {
+			label = "net-led";
+			gpios = <&gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+		work-led {
+			label = "work-led";
+			gpios = <&gpio0 RK_PC7 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "timer";
+		};
 	};
 
 	gmac0_xpcsclk: xpcs-gmac0-clock {
@@ -30,7 +45,6 @@
 		#clock-cells = <0>;
 	};
 
-#ifdef DTS_NO_LEGACY
 	hdmi-con {
 		compatible = "hdmi-connector";
 		type = "a";
@@ -40,24 +54,6 @@
 				remote-endpoint = <&hdmi_out_con>;
 			};
 		};
-	};
-#endif
-
-	modem-rfkill {
-		compatible = "rfkill-gpio";
-		name = "modem-rfkill";
-		type = "wwan";
-		reset-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_HIGH>;
-		shutdown-gpios = <&gpio4 RK_PC4 GPIO_ACTIVE_LOW>;
-	};
-
-	sdio_pwrseq: sdio-pwrseq {
-		compatible = "mmc-pwrseq-simple";
-		clocks = <&pmucru CLK_RTC_32K>;
-		clock-names = "ext_clock";
-		pinctrl-names = "default";
-		pinctrl-0 = <&wifi_enable_h &clk32k_out1>;
-		reset-gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_LOW>;
 	};
 
 	vcc_1v8: vcc-1v8 {
@@ -145,18 +141,6 @@
 		vin-supply = <&vcc3v3_pi6c>;
 	};
 
-	vcc3v3_ngff: vcc3v3-ngff {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&ngffpcie_enable_h>;
-		regulator-name = "vcc3v3_ngff";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		vin-supply = <&vcc3v3_sys>;
-	};
-
 	vcc3v3_sd: vcc3v3_sd {
 		compatible = "regulator-fixed";
 		gpio = <&gpio0 RK_PB6 GPIO_ACTIVE_LOW>;
@@ -220,6 +204,60 @@
 		pwms = <&pwm1 0 5000 1>;
 		pwm-supply = <&vcc_syson>;
 	};
+
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_enable_h>;
+		reset-gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <200>;
+	};
+
+	gpio-poweroff {
+		compatible = "gpio-poweroff";
+		gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_LOW>;
+		timeout-ms = <3000>;
+	};
+
+	modem-rfkill {
+		compatible = "rfkill-gpio-neo";
+		name = "modem-rfkill";
+		type = "wwan";
+		power-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
+		block-gpio = <&gpio4 RK_PC4 GPIO_ACTIVE_LOW>;
+		power-on-wait-time = <500>;
+		reset-wait-time = <0>;
+		reset-active-time = <800>;
+	};
+
+	firmware {
+		optee: optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+/*
+		hole {
+			compatible = "removed-dma-pool";
+			reg = <0x0 0x38000000 0x0 0x08000000>;
+			no-map;
+		};
+*/
+		ramoops: ramoops@110000 {
+			compatible = "ramoops";
+			reg = <0x0 0x110000 0x0 0xf0000>;
+			record-size = <0x20000>;
+			console-size = <0x80000>;
+			ftrace-size = <0x00000>;
+			pmsg-size = <0x50000>;
+		}; 
+	};
 };
 
 &combphy0 {
@@ -256,6 +294,7 @@
 	power-domains = <&power RK3568_PD_PIPE>;
 	phys = <&combphy2 PHY_TYPE_SGMII>;
 	phy-handle = <&sgmii_phy>;
+	clock_in_out = "input";
 	phy-mode = "sgmii";
 	phy-supply = <&vcc_3v3>;
 	pinctrl-names = "default";
@@ -286,12 +325,11 @@
 	snps,reset-gpio = <&gpio4 RK_PC0 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 20000 100000>;
-	tx_delay = <0x30>;
-	rx_delay = <0x10>;
+	tx_delay = <0x38>;
+	rx_delay = <0x15>;
 	status = "okay";
 };
 
-#ifdef DTS_NO_LEGACY
 &gpu {
 	mali-supply = <&vdd_gpu>;
 	status = "okay";
@@ -318,7 +356,6 @@
 &hdmi_sound {
 	status = "okay";
 };
-#endif
 
 &i2c0 {
 	status = "okay";
@@ -331,8 +368,8 @@
 		regulator-always-on;
 		regulator-boot-on;
 		regulator-init-microvolt = <900000>;
-		regulator-min-microvolt = <712500>;
-		regulator-max-microvolt = <1390000>;
+		regulator-min-microvolt = <810000>;
+		regulator-max-microvolt = <1150000>;
 		regulator-ramp-delay = <2300>;
 		vin-supply = <&vcc_syson>;
 
@@ -348,11 +385,9 @@
 	status = "okay";
 };
 
-#ifdef DTS_NO_LEGACY
 &i2s0_8ch {
 	status = "okay";
 };
-#endif
 
 &mdio0 {
 	sgmii_phy: ethernet-phy@0 {
@@ -376,6 +411,7 @@
 &pcie3x2 {
 	reset-gpios = <&gpio0 RK_PC3 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&vcc3v3_pcie>;
+	max-link-speed = <1>;
 	status = "okay";
 };
 
@@ -392,19 +428,9 @@
 		};
 	};
 
-	sdio-pwrseq {
-		wifi_enable_h: wifi-enable-h {
-			rockchip,pins = <2 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
-
 	usb {
 		vcc5v0_usb_otg_en: vcc5v0_usb_otg_en {
 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-
-		ngffpcie_enable_h: ngffpcie-enable-h {
-			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -414,9 +440,9 @@
 		};
 	};
 
-	wifi {
-		sdio_wifi_host_wake_l: sdio-wifi-host-wake-l {
-			rockchip,pins = <2 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+	sdio-pwrseq {
+		wifi_enable_h: wifi-enable-h {
+			rockchip,pins = <2 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 };
@@ -456,8 +482,10 @@
 	non-removable;
 	pinctrl-names = "default";
 	pinctrl-0 = <&emmc_bus8 &emmc_clk &emmc_cmd>;
+	supports-emmc;
 	vmmc-supply = <&vcc_3v3>;
 	vqmmc-supply = <&vcc_1v8>;
+	status = "okay";
 };
 
 &sdmmc0 {
@@ -479,23 +507,30 @@
 	bus-width = <4>;
 	cap-sd-highspeed;
 	keep-power-in-suspend;
-	mmc-pwrseq = <&sdio_pwrseq>;
+	disable-wp;
 	non-removable;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_clk &sdmmc1_cmd>;
-	sd-uhs-sdr104;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	status = "okay";
+	max-frequency = <50000000>;
+	//max-frequency = <150000000>;
+	cap-sdio-irq;
 	vmmc-supply = <&vcc3v3_sys>;
 	vqmmc-supply = <&vcc_1v8>;
-	status = "okay";
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	//sd-uhs-sdr104;
+	no-mmc;
+	no-sd;
+	wakeup-source;
 
-	sdio_wifi@1 {
-		//compatible = "brcm,bcm4329-fmac";
+	ath10k: sdio_wifi@1 {
 		reg = <1>;
+		compatible = "qcom,ath10k";
 		interrupt-parent = <&gpio2>;
 		interrupts = <RK_PB2 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "host-wake";
-		pinctrl-names = "default";
-                pinctrl-0 = <&sdio_wifi_host_wake_l>;
+		status = "okay";
 	};
 };
 
@@ -543,11 +578,24 @@
 };
 
 &usb_host0_xhci {
+	dr_mode = "host";
+	status = "okay";
+};
+
+/* set speed to high-speed (usb2.0) */
+&usb_host1_xhci {
+	phys = <&usb2phy0_host>;
+	phy-names = "usb2-phy";
+	maximum-speed = "high-speed";
 	extcon = <&usb2phy0>;
 	status = "okay";
 };
 
-&usb_host1_xhci {
+&usb_host1_ehci {
+	status = "okay";
+};
+
+&usb_host1_ohci { 
 	status = "okay";
 };
 
@@ -556,7 +604,6 @@
 };
 
 &usb2phy0_host {
-	phy-supply = <&vcc3v3_ngff>;
 	status = "okay";
 };
 
@@ -574,7 +621,6 @@
 	status = "okay";
 };
 
-#ifdef DTS_NO_LEGACY
 &vop {
 	assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
 	assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
@@ -591,13 +637,24 @@
 		remote-endpoint = <&hdmi_in_vp0>;
 	};
 };
-#endif
 
 &xin32k {
-	pinctrl-names = "default";
+	clock-frequency = <32768>;
+	clock-output-names = "xin32k";
 	pinctrl-0 = <&clk32k_out1>;
+	pinctrl-names = "default";
+	status = "okay";
 };
 
 &xpcs {
 	status = "okay";
+};
+
+&gpio4 {
+	aux-pwren {
+		gpio-hog;
+		gpios = <RK_PD2 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "aux-pwren";
+        };
 };

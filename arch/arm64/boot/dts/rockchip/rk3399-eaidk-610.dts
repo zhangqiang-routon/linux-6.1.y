@@ -690,6 +690,10 @@
 	};
 };
 
+&i2c7 {
+	status = "okay";
+};
+
 &i2s1 {
 	rockchip,playback-channels = <2>;
 	rockchip,capture-channels = <2>;
@@ -978,7 +982,7 @@
 
 &usbdrd_dwc3_0 {
 	status = "okay";
-	usb-role-switch;
+	dr_mode = "host";
 
 	port {
 		#address-cells = <1>;
